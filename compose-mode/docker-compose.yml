@@ -1,0 +1,66 @@
+services:
+    web1:
+        container_name: us-web1
+        hostname: us-web1
+        #  This image runs http in 3000 port
+        image: svarunan/net-tools:latest
+        # volumes:
+        # mount app.js file if you want to replace the image js
+        #  - /home/ubuntu/docker-conf/app1.js:/app/app.js
+        environment:
+            AWS_KEY: secretkey
+        # Host mode will make your container ip directly visible to parent host 
+        network_mode: host
+        # If you want seperate log rotate for this container        
+        logging:
+          driver: "json-file"
+          options:
+            max-size: "100m"
+            max-file: "10"
+            compress: "true"
+            mode: "non-blocking"
+            max-buffer-size : "4m"
+        # if you want auto restart if you container crashes
+        restart: always
+        depends_on:
+          # wait for mysql to come up first
+          - mysql               
+    web2:
+        hostname: us-web2
+        image: svarunan/net-tools:latest 
+        # bridge mode will make your ip intra accessible only to same local networks
+        networks:
+            my-local:
+                # Un comment if you want you own ip
+                ipv4_address: 172.29.1.2
+        # If you want to run in overlay mode but still want this container to connect with other containers of local network, then expose the port.
+        #ports:
+        #  - "3000:3000"
+       #command:
+         #- |
+           #cmd1
+           #cmd2
+    mysql:
+        hostname: ubuntu-mysql
+        image: mysql
+        # if you need to init db sql file
+        # command: --init-file /home/ubuntu/docker-conf/init.sql
+        networks:
+            my-local: {}
+        volumes:
+          - my-db:/var/lib/mysql                                           
+version: "3.7" 
+networks:
+    my-local:
+      driver: default
+      ipam:
+         driver: default
+         config:
+            # each container using this my-local ntw will get its ip from below subnet pool
+             - subnet: 172.29.0.0/16
+    hostnet:
+      external: true
+      name: host
+volumes:
+  # virtual image name
+  my-db:

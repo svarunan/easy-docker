@@ -1,0 +1,73 @@
+services:
+    web1:
+        hostname: ${HOST_NAME}-web1
+        #  This image runs http in 3000 port
+        image: ${WEB1}
+        # volumes:
+        # mount app.js file if you want to replace the image js
+        #  - /home/ubuntu/docker-conf/app1.js:/app/app.js
+        environment:
+            AWS_KEY: ${AWS_KEY}
+        networks:
+        # Host mode will make your container ip directly visible to parent host 
+            hostnet: {}
+        deploy:
+            mode: replicated
+            replicas: 1
+            placement:
+                # Run this container in Master mode on host 1
+                constraints: [ "node.hostname==${HOST_NAME}-1" ]
+        # If you want seperate log rotate for this container        
+        logging:
+          driver: "json-file"
+          options:
+            max-size: "100m"
+            max-file: "10"
+            compress: "true"
+            mode: "non-blocking"
+            max-buffer-size : "4m"                     
+    web2:
+        hostname: ${HOST_NAME}-web2
+        image: ${WEB2}  
+        networks:
+        # overlay mode will make your ip intra accessible only to same local networks
+            my-local: {}
+        # If you want to run in overlay mode but still want this container to connect with other containers of local network, then expose the port.
+        #ports:
+        #  - "3000:3000"
+        deploy:
+            mode: replicated
+            replicas: 1
+            placement:
+              # Run this container in Worker mode on host 2
+                constraints: [ "node.hostname==${HOST_NAME}-2" ]
+    mysql:
+        hostname: ${HOST_NAME}-mysql
+        image: mysql
+        # if you need to init db sql file
+        # command: --init-file /home/ubuntu/docker-conf/init.sql
+        networks:
+            my-local: {}
+        volumes:
+          - my-db:/var/lib/mysql                 
+        deploy:
+            mode: replicated
+            replicas: 1
+            placement:
+                constraints: [ "node.hostname==${HOST_NAME}-1" ]                                            
+version: "3.7" 
+networks:
+    my-local:
+      driver: overlay
+      attachable: true
+      ipam:
+         driver: default
+         config:
+            # each container using this my-local ntw will get its ip from below subnet pool
+             - subnet: 172.29.0.0/16
+    hostnet:
+      external: true
+      name: host
+volumes:
+  # virtual image name
+  my-db:
