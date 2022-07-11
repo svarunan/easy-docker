@@ -14,6 +14,9 @@ docker-compose up --build
 docker-compose up -d --scale <container_name>=2
 
 # Compose down
+docker-compose down
+
+# Compose down with volumes
 docker-compose down -v
 
 # To start the last exited container
